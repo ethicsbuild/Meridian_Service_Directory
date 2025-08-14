@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  />
+  <title>Meridian Services Directory</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="page-header">
+      <h1>Meridian Services Directory</h1>
+      <p class="lead">Neighbors first. A simple way to offer what you do—and find what you need—right here in Meridian.</p>
+    </header>
+
+    <!-- Meridian narrative -->
+    <section class="about block">
+      <p>We live here together. We see each other at the mailbox, wave across driveways, and share the same streets every day. Some of us fix things beautifully. Others teach, create, organize, or solve problems we didn't even know we had.</p>
+      <p>Living in Meridian gives us something increasingly rare—a true neighborhood where people actually know their neighbors. We're small enough to recognize faces, close enough to build real relationships, and connected enough to look out for each other. That's a gift worth protecting and strengthening.</p>
+      <p>We've already been doing this naturally in our Facebook groups—posting services, asking for recommendations, sharing what we know. This directory is just the next step in that same spirit. Instead of scrolling through posts to find who does what, we can have it all in one place, easy to search when we need it.</p>
+      <p>This is simply a way to know each other better—to discover that Sarah two blocks over is a brilliant tutor, that Mike down the street does incredible woodwork, or that the couple with the always-perfect garden offers landscaping help.</p>
+      <p>When we need something, why not start here? When we have something to offer, why not let our neighbors know? There's real wisdom in keeping our resources and relationships close to home, especially when home is a place like this.</p>
+      <p>Add yourself if you live in Meridian and have skills, services, or knowledge to share. Browse when you're looking for help with something. It's that simple.</p>
+      <p>We're all here anyway. Let's just make it easier to find each other.</p>
+    </section>
+
+    <!-- Add Service -->
+    <section id="add-service" class="section">
+      <h2 class="section-title">Add Your Service</h2>
+      <p class="section-subtitle">Tell us what you offer your neighbors and how you want to be known.</p>
+
+      <div class="form-card">
+        <form id="service-form" novalidate>
+          <label for="name">Your Name</label>
+          <input type="text" id="name" name="name" placeholder="Your name" required />
+
+          <label for="category">What do you offer?</label>
+          <input
+            type="text"
+            id="category"
+            name="category"
+            list="category-list"
+            placeholder="e.g., Babysitting, Tech Support"
+            required
+          />
+          <datalist id="category-list">
+            <option value="Babysitting"></option>
+            <option value="Pet Care"></option>
+            <option value="Lawn Care"></option>
+            <option value="Handyman"></option>
+            <option value="Tutoring"></option>
+            <option value="Childcare"></option>
+            <option value="Carpool"></option>
+            <option value="Elderly Care"></option>
+            <option value="Event Planning"></option>
+            <option value="Home Cleaning"></option>
+            <option value="Tech Support"></option>
+            <option value="Artisan Crafts"></option>
+          </datalist>
+
+          <label for="description">Description</label>
+          <textarea id="description" name="description" placeholder="Short, clear description of your service" required></textarea>
+
+          <div class="row">
+            <div class="col">
+              <label for="price">Price (optional)</label>
+              <input type="text" id="price" name="price" placeholder="e.g., $20/hour" />
+            </div>
+            <div class="col">
+              <label for="contact">Contact (email/phone)</label>
+              <input type="text" id="contact" name="contact" placeholder="how neighbors can reach you" required />
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary">Submit Service</button>
+        </form>
+
+        <p id="message" class="success-msg" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- Hidden for now; re-enable when the gallery design is ready -->
+    <section id="services-list" class="section" hidden>
+      <h2>Available Services</h2>
+      <div id="services" class="services-container"></div>
+    </section>
+  </main>
+
+  <!-- Supabase SDK -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <!-- Configure your Supabase project here -->
+  <script>
+    // TODO: replace with your actual values
+    const SUPABASE_URL = "https://hpzmzppvfqsgirdxblmh.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhwem16cHB2ZnFzZ2lyZHhibG1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNTA5MjEsImV4cCI6MjA3MDcyNjkyMX0.b8_jIVUniTjSiZJfQ7HVYqsgmiYyqLL3wVkJWDtN8rs";
+
+    // Initialize client
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Form handler: insert into 'services' table
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('service-form');
+      const message = document.getElementById('message');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        message.textContent = '';
+
+        const formData = new FormData(form);
+        const payload = {
+          name: (formData.get('name') || '').trim(),
+          category: (formData.get('category') || '').trim(),
+          description: (formData.get('description') || '').trim(),
+          price: (formData.get('price') || '').trim() || null,
+          contact: (formData.get('contact') || '').trim()
+        };
+
+        if (!payload.name || !payload.category || !payload.description || !payload.contact) {
+          message.style.color = 'crimson';
+          message.textContent = 'Please fill in all required fields.';
+          return;
+        }
+
+        try {
+          const { error } = await supabase.from('services').insert(payload);
+          if (error) throw error;
+
+          message.style.color = 'green';
+          message.textContent = 'Thanks! Your service has been added.';
+          form.reset();
+        } catch (err) {
+          console.error(err);
+          message.style.color = 'crimson';
+          message.textContent = 'Could not submit your service. Please try again.';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
