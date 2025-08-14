@@ -5,151 +5,79 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Browse Services — Meridian</title>
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    .coming-soon {
+      text-align: center;
+      margin-top: 60px;
+      font-size: 1.2rem;
+      line-height: 1.6;
+      color: #444;
+    }
+  </style>
 </head>
 <body>
   <main class="container">
     <header class="page-header">
       <h1>Browse Services</h1>
-      <p class="lead">Search your neighbors’ offerings. Hyperlocal, human, and easy to reach.</p>
+      <p class="lead">As more of us sign up, this page will become the go-to place to discover what your neighbors can offer.</p>
       <p style="text-align:center;margin-top:10px;">
         <a href="index.html" style="text-decoration:none;">← Add your service</a>
       </p>
     </header>
 
-    <!-- Filters -->
     <section class="section">
-      <div class="form-card">
-        <div class="row">
-          <div class="col">
-            <label for="q">Search keywords</label>
-            <input id="q" type="text" placeholder="e.g., lawn, tutor, tech support" />
-          </div>
-          <div class="col">
-            <label for="cat">Category</label>
-            <input id="cat" type="text" list="category-list" placeholder="All categories" />
-          </div>
-        </div>
-
-        <datalist id="category-list">
-          <option value="Babysitting"></option>
-          <option value="Pet Care"></option>
-          <option value="Lawn Care"></option>
-          <option value="Handyman"></option>
-          <option value="Tutoring"></option>
-          <option value="Childcare"></option>
-          <option value="Carpool"></option>
-          <option value="Elderly Care"></option>
-          <option value="Event Planning"></option>
-          <option value="Home Cleaning"></option>
-          <option value="Tech Support"></option>
-          <option value="Artisan Crafts"></option>
-        </datalist>
-
-        <div style="display:flex;gap:12px;align-items:center;margin-top:8px;">
-          <label style="display:flex;gap:8px;align-items:center;">
-            <input id="onlyVerified" type="checkbox" />
-            Show only verified
-          </label>
-          <button id="searchBtn" class="btn-primary" type="button" style="max-width:200px;">Search</button>
-        </div>
+      <div id="results" class="coming-soon">
+        If you build it, they will come.<br />
+        Once services are added, they’ll appear here — searchable and easy to find.<br />
+        Why not be one of the first? <a href="index.html">Add your service now</a>.
       </div>
-    </section>
-
-    <!-- Results -->
-    <section class="section">
-      <div id="results" class="services-container" aria-live="polite"></div>
     </section>
   </main>
 
   <!-- Supabase SDK -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
-    // TODO: paste YOUR values
-    const SUPABASE_URL = "https://YOUR-PROJECT-REF.supabase.co";
-    const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
+    // TODO: replace with your Supabase project values
+    const SUPABASE_URL = "https://hpzmzppvfqsgirdxblmh.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhwem16cHB2ZnFzZ2lyZHhibG1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNTA5MjEsImV4cCI6MjA3MDcyNjkyMX0.b8_jIVUniTjSiZJfQ7HVYqsgmiYyqLL3wVkJWDtN8rs";
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    async function fetchServices({ q = "", cat = "", onlyVerified = false } = {}) {
-      let query = supabase
-        .from("services")
-        .select("id,name,category,description,price,contact,created_at,verified")
-        .order("created_at", { ascending: false });
+    async function loadServices() {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      if (onlyVerified) query = query.eq("verified", true);
-      if (cat && cat.trim()) query = query.ilike("category", cat.trim());
-      if (q && q.trim()) {
-        // broad OR match across a few fields
-        const term = q.trim();
-        query = query.or(
-          `name.ilike.%${term}%,category.ilike.%${term}%,description.ilike.%${term}%`
-        );
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data ?? [];
-    }
-
-    function escapeHtml(str) {
-      return String(str ?? "")
-        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;").replaceAll("'","&#39;");
-    }
-
-    function renderCards(items) {
-      const wrap = document.getElementById("results");
-      wrap.innerHTML = "";
-      if (!items.length) {
-        wrap.innerHTML = "<p>No matching services yet.</p>";
+      if (error) {
+        console.error(error);
         return;
       }
-      for (const svc of items) {
-        const card = document.createElement("div");
-        card.className = "service-card";
-        const priceRow = svc.price ? `<p class="service-meta">Price: ${escapeHtml(svc.price)}</p>` : "";
-        const contactRow = svc.contact ? `<p class="service-meta">Contact: ${escapeHtml(svc.contact)}</p>` : "";
-        const badge = svc.verified ? `<span class="service-meta" style="padding:2px 6px;border:1px solid #d1d5db;border-radius:12px;">verified</span>` : "";
+
+      const resultsDiv = document.getElementById('results');
+
+      if (!data || data.length === 0) {
+        // Keep the coming soon message
+        return;
+      }
+
+      // Replace coming soon with actual services
+      resultsDiv.innerHTML = '';
+      data.forEach(service => {
+        const card = document.createElement('div');
+        card.className = 'service-card';
         card.innerHTML = `
-          <h3 style="display:flex;gap:8px;align-items:center;">
-            ${escapeHtml(svc.category)} ${badge}
-          </h3>
-          <p>${escapeHtml(svc.description)}</p>
-          ${priceRow}
-          <p class="service-meta">Offered by: ${escapeHtml(svc.name)}</p>
-          ${contactRow}
+          <h3>${service.category}</h3>
+          <p>${service.description}</p>
+          ${service.price ? `<p><strong>Price:</strong> ${service.price}</p>` : ''}
+          <p><strong>Offered by:</strong> ${service.name}</p>
+          <p><strong>Contact:</strong> ${service.contact}</p>
         `;
-        wrap.appendChild(card);
-      }
-    }
-
-    async function runSearch() {
-      const q = document.getElementById("q").value;
-      const cat = document.getElementById("cat").value;
-      const onlyVerified = document.getElementById("onlyVerified").checked;
-      const btn = document.getElementById("searchBtn");
-      const wrap = document.getElementById("results");
-
-      btn.disabled = true;
-      wrap.innerHTML = "Loading…";
-      try {
-        const items = await fetchServices({ q, cat, onlyVerified });
-        renderCards(items);
-      } catch (e) {
-        console.error(e);
-        wrap.innerHTML = "<p>Could not load services.</p>";
-      } finally {
-        btn.disabled = false;
-      }
-    }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById("searchBtn").addEventListener("click", runSearch);
-      document.getElementById("q").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") runSearch();
+        resultsDiv.appendChild(card);
       });
-      runSearch(); // initial load
-    });
+    }
+
+    document.addEventListener('DOMContentLoaded', loadServices);
   </script>
 </body>
 </html>
