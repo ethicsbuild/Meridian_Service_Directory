@@ -49,13 +49,7 @@
     </section>
   </main>
 
-  <!-- Configuration and Dependencies -->
-  <script src="config.js"></script>
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
-    // Initialize Supabase client with config values
-    const supabase = window.supabase.createClient(window.config.SUPABASE_URL, window.config.SUPABASE_ANON_KEY);
-
     // DOM
     const resultsEl = document.getElementById('results');
     const resultsMetaEl = document.getElementById('resultsMeta');
@@ -63,7 +57,7 @@
     const categoryEl = document.getElementById('category');
     const sortEl = document.getElementById('sort');
 
-    // Fetch all services once, then filter client-side (fast for small MVPs)
+    // Fetch all services once, then filter client-side
     let ALL = [];
 
     function render(list) {
@@ -145,20 +139,18 @@
     }
 
     async function load() {
-      // Pull everything we need; select created_at if your table has it
-      const { data, error } = await supabase
-        .from('services')
-        .select('id, name, category, description, price, contact, created_at');
+      try {
+        const response = await fetch('/api/services');
+        if (!response.ok) throw new Error('Failed to load services');
+        const data = await response.json();
 
-      if (error) {
+        ALL = data || [];
+        populateCategoryFilter(ALL);
+        applyFilters();
+      } catch (error) {
         console.error(error);
         resultsEl.innerHTML = `<p class="error">Could not load services.</p>`;
-        return;
       }
-
-      ALL = data || [];
-      populateCategoryFilter(ALL);
-      applyFilters();
     }
 
     // Events
