@@ -86,26 +86,23 @@
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const password = document.getElementById('password').value;
-            
-            if (password === ADMIN_PASSWORD) {
-                try {
-                    // Sign in as admin
-                    const { data: { session }, error } = await supabase.auth.signInWithPassword({
-                        email: 'admin@meridianservices.local',
-                        password: ADMIN_PASSWORD
-                    });
+            const email = 'admin@meridianservices.local'; // Replace with your admin email
 
-                    if (error) throw error;
+            try {
+                // Sign in as admin
+                const { data: { session }, error } = await supabase.auth.signInWithPassword({
+                    email,
+                    password
+                });
 
-                    // Hide auth screen and load services
-                    authScreen.style.display = 'none';
-                    await loadServices();
-                } catch (error) {
-                    console.error('Auth error:', error);
-                    alert('Authentication failed. Please try again.');
-                }
-            } else {
-                alert('Incorrect password');
+                if (error) throw error;
+
+                // Hide auth screen and load services
+                authScreen.style.display = 'none';
+                await loadServices();
+            } catch (error) {
+                console.error('Auth error:', error);
+                alert('Authentication failed. Please check your email and password.');
             }
         });
 
