@@ -106,16 +106,27 @@
         async function deleteService(id) {
             if (!confirm('Are you sure you want to delete this service?')) return;
             
-            const { error } = await supabase
-                .from('services')
-                .delete()
-                .eq('id', id);
+            try {
+                const { error } = await supabase
+                    .from('services')
+                    .delete()
+                    .match({ id: id });
 
-            if (error) {
-                alert('Error deleting service');
-                console.error(error);
-            } else {
-                loadServices();
+                if (error) {
+                    throw error;
+                }
+
+                // If delete was successful, remove the card from UI immediately
+                const card = document.querySelector(`[data-id="${id}"]`);
+                if (card) {
+                    card.remove();
+                }
+
+                // Then reload all services to ensure everything is in sync
+                await loadServices();
+            } catch (error) {
+                console.error('Delete error:', error);
+                alert('Error deleting service. Please try again.');
             }
         }
 
@@ -150,7 +161,7 @@
             }
 
             servicesContainer.innerHTML = data.map(service => `
-                <div class="service-card">
+                <div class="service-card" data-id="${service.id}">
                     <div class="admin-actions">
                         <button class="btn-edit" onclick="toggleEdit('${service.id}')">Edit</button>
                         <button class="btn-delete" onclick="deleteService('${service.id}')">Delete</button>
