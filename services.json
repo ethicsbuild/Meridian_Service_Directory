@@ -1,0 +1,10 @@
+[
+  {
+    "name": "John Doe",
+    "category": "Lawn Care",
+    "description": "Mowing and trimming",
+    "price": "$25/hour",
+    "contact": "john@example.com",
+    "id": 1755145760184
+  }
+]

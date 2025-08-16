@@ -1,0 +1,11 @@
+# Configuration files with sensitive data
+config.js
+
+# OS specific files
+.DS_Store
+
+# Logs
+*.log
+
+# Dependencies
+node_modules/

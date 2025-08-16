@@ -5,19 +5,169 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Browse Services – Meridian Services Directory</title>
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* minimal extras kept local to avoid touching styles.css */
+    .search-bar { display:flex; gap:12px; flex-wrap:wrap; margin: 16px 0 8px; }
+    .search-bar input, .search-bar select { flex:1; min-width:220px; }
+    .results-meta { font-size: 0.9rem; color: #555; margin: 6px 0 18px; }
+    .service-card { background:#fff; border:1px solid #e5e5e5; border-radius:10px; padding:16px; margin:12px 0; }
+    .service-card h3 { margin:0 0 4px; }
+    .service-card .meta { color:#385; font-weight:600; margin-bottom:6px; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid #cbd5c0; font-size:0.8rem; margin-left:8px; color:#2f5b35; }
+    .muted { color:#666; }
+    .empty { padding:18px; border:1px dashed #cbd5c0; border-radius:10px; background:#fafdf9; }
+  </style>
 </head>
 <body>
   <main class="container">
     <header class="page-header">
       <h1>Browse Services</h1>
-      <p class="lead">Neighbors helping neighbors — right here in Meridian.</p>
+      <p class="lead">Search and connect with neighbors offering their skills and services.</p>
     </header>
 
+    <!-- Search + Filters -->
+    <section class="search-section">
+      <div class="search-bar">
+        <input id="q" type="text" placeholder="Search by name, category, or keywords…" />
+        <select id="category">
+          <option value="">All categories</option>
+        </select>
+        <select id="sort">
+          <option value="new">Newest first</option>
+          <option value="name">Name A–Z</option>
+          <option value="category">Category A–Z</option>
+        </select>
+      </div>
+      <div class="results-meta" id="resultsMeta"></div>
+    </section>
+
+    <!-- Results -->
+    <section id="results" class="services-container"></section>
+
     <section class="about block">
-      <p>We’re just getting started! As more of our neighbors sign up, this is where you’ll be able to browse the services, skills, and knowledge shared within our community.</p>
-      <p>If you have something to offer — whether it’s fixing a fence, baking amazing bread, tutoring kids, or helping with tech — <a href="index.html#add-service">add your service</a> today. Every new listing makes this directory more useful for everyone.</p>
-      <p>Think of it as keeping our resources close to home, where trust runs deep and helping hands are just a few houses away.</p>
+      <p class="muted">Don't see what you need? <a href="index.html#add-service">Add your service</a> and help the list grow.</p>
     </section>
   </main>
+
+  <!-- Configuration and Dependencies -->
+  <script src="config.js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script>
+    // Initialize Supabase client with config values
+    const supabase = window.supabase.createClient(window.config.SUPABASE_URL, window.config.SUPABASE_ANON_KEY);
+
+    // DOM
+    const resultsEl = document.getElementById('results');
+    const resultsMetaEl = document.getElementById('resultsMeta');
+    const qEl = document.getElementById('q');
+    const categoryEl = document.getElementById('category');
+    const sortEl = document.getElementById('sort');
+
+    // Fetch all services once, then filter client-side (fast for small MVPs)
+    let ALL = [];
+
+    function render(list) {
+      resultsMetaEl.textContent = list.length
+        ? `${list.length} service${list.length === 1 ? '' : 's'}`
+        : 'No services found';
+
+      if (!list.length) {
+        resultsEl.innerHTML = `
+          <div class="empty">Nothing matches yet. Try a different term or
+          <a href="index.html#add-service">add your service</a>.</div>`;
+        return;
+      }
+
+      resultsEl.innerHTML = list.map(s => {
+        const price = s.price ? `<span class="badge">${escapeHtml(s.price)}</span>` : '';
+        return `
+          <div class="service-card">
+            <h3>${escapeHtml(s.name)}</h3>
+            <div class="meta">${escapeHtml(s.category || 'Uncategorized')} ${price}</div>
+            <p>${escapeHtml(s.description || '')}</p>
+            <p><strong>Contact:</strong> ${escapeHtml(s.contact)}</p>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(str='') {
+      return String(str)
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'","&#039;");
+    }
+
+    function uniqueCategories(rows) {
+      const set = new Set();
+      rows.forEach(r => { if (r.category) set.add(r.category.trim()); });
+      return Array.from(set).sort((a,b)=>a.localeCompare(b));
+    }
+
+    function populateCategoryFilter(rows) {
+      const cats = uniqueCategories(rows);
+      categoryEl.innerHTML = `<option value="">All categories</option>` +
+        cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    }
+
+    function applyFilters() {
+      const q = qEl.value.trim().toLowerCase();
+      const cat = categoryEl.value.trim().toLowerCase();
+      const sort = sortEl.value;
+
+      let list = ALL.filter(s => {
+        const matchesQ = !q || (
+          (s.name||'').toLowerCase().includes(q) ||
+          (s.category||'').toLowerCase().includes(q) ||
+          (s.description||'').toLowerCase().includes(q)
+        );
+        const matchesCat = !cat || (s.category||'').toLowerCase() === cat;
+        return matchesQ && matchesCat;
+      });
+
+      if (sort === 'name') {
+        list.sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+      } else if (sort === 'category') {
+        list.sort((a,b)=> (a.category||'').localeCompare(b.category||''));
+      } else {
+        // newest first assumes created_at exists
+        list.sort((a,b)=> new Date(b.created_at||0) - new Date(a.created_at||0));
+      }
+
+      render(list);
+    }
+
+    // simple debounce so we don't over-render while typing
+    function debounce(fn, ms=200) {
+      let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); };
+    }
+
+    async function load() {
+      // Pull everything we need; select created_at if your table has it
+      const { data, error } = await supabase
+        .from('services')
+        .select('id, name, category, description, price, contact, created_at');
+
+      if (error) {
+        console.error(error);
+        resultsEl.innerHTML = `<p class="error">Could not load services.</p>`;
+        return;
+      }
+
+      ALL = data || [];
+      populateCategoryFilter(ALL);
+      applyFilters();
+    }
+
+    // Events
+    qEl.addEventListener('input', debounce(applyFilters, 150));
+    categoryEl.addEventListener('change', applyFilters);
+    sortEl.addEventListener('change', applyFilters);
+
+    // Kickoff
+    load();
+  </script>
 </body>
 </html>
