@@ -158,11 +158,13 @@
 
         if (error) throw error;
 
+        console.log('Fetched data:', data); // Debugging log to verify fetched data
+
         ALL = data || [];
         populateCategoryFilter(ALL);
         applyFilters();
       } catch (error) {
-        console.error(error);
+        console.error('Error fetching services:', error); // Debugging log for errors
         resultsEl.innerHTML = `<p class="error">Could not load services.</p>`;
       }
     }
