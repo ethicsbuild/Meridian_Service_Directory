@@ -1,5 +1,7 @@
 // Initialize Supabase client from globals set in index.html
-const supabase = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+const SUPABASE_URL = "https://hpzmzppvfqsgirdxblmh.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhwem16cHB2ZnFzZ2lyZHhibG1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNTA5MjEsImV4cCI6MjA3MDcyNjkyMX0.b8_jIVUniTjSiZJfQ7HVYqsgmiYyqLL3wVkJWDtN8rs";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Handle form submission
 document.addEventListener('DOMContentLoaded', () => {
