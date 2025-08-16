@@ -75,7 +75,7 @@
     <script>
         const SUPABASE_URL = "https://hpzmzppvfqsgirdxblmh.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhwem16cHB2ZnFzZ2lyZHhibG1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNTA5MjEsImV4cCI6MjA3MDcyNjkyMX0.b8_jIVUniTjSiZJfQ7HVYqsgmiYyqLL3wVkJWDtN8rs";
-        const ADMIN_PASSWORD = "MeridianAdmin2025"; // You should change this!
+        const ADMIN_PASSWORD = "MeridianAdmin2025";
 
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         const authScreen = document.getElementById('auth');
@@ -83,12 +83,27 @@
         const servicesContainer = document.getElementById('services');
 
         // Auth handling
-        loginForm.addEventListener('submit', (e) => {
+        loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const password = document.getElementById('password').value;
+            
             if (password === ADMIN_PASSWORD) {
-                authScreen.style.display = 'none';
-                loadServices();
+                try {
+                    // Sign in as admin
+                    const { data: { session }, error } = await supabase.auth.signInWithPassword({
+                        email: 'admin@meridianservices.local',
+                        password: ADMIN_PASSWORD
+                    });
+
+                    if (error) throw error;
+
+                    // Hide auth screen and load services
+                    authScreen.style.display = 'none';
+                    await loadServices();
+                } catch (error) {
+                    console.error('Auth error:', error);
+                    alert('Authentication failed. Please try again.');
+                }
             } else {
                 alert('Incorrect password');
             }
@@ -107,6 +122,12 @@
             if (!confirm('Are you sure you want to delete this service?')) return;
             
             try {
+                // Check if we're authenticated
+                const { data: { session }, error: authError } = await supabase.auth.getSession();
+                if (!session) {
+                    throw new Error('Not authenticated');
+                }
+
                 // First try to delete
                 const { error } = await supabase
                     .from('services')
@@ -123,7 +144,7 @@
                     card.remove();
                 }
 
-                // No need to reload everything, just update the UI
+                // Check remaining services
                 const remainingCards = document.querySelectorAll('.service-card');
                 if (remainingCards.length === 0) {
                     servicesContainer.innerHTML = '<p>No services available.</p>';
@@ -131,7 +152,12 @@
 
             } catch (error) {
                 console.error('Delete error:', error);
-                alert('Error deleting service. Please try again.');
+                if (error.message === 'Not authenticated') {
+                    alert('Your session has expired. Please refresh and log in again.');
+                    authScreen.style.display = 'flex';
+                } else {
+                    alert('Error deleting service. Please try again.');
+                }
             }
         }
 
