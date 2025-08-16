@@ -26,7 +26,16 @@ function writeServices(services) {
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname)));
+
+// Serve HTML files
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/services.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'services.html'));
+});
 
 // API Routes
 app.get('/api/services', (req, res) => {
