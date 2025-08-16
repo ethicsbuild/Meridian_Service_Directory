@@ -107,51 +107,31 @@
             if (!confirm('Are you sure you want to delete this service?')) return;
             
             try {
-                // Remove from UI first for immediate feedback
-                const card = document.querySelector(`[data-id="${id}"]`);
-                if (card) {
-                    card.style.opacity = '0.5';
-                }
-
-                // Delete from Supabase
+                // First try to delete
                 const { error } = await supabase
                     .from('services')
                     .delete()
-                    .eq('id', id);
+                    .filter('id', 'eq', id);
 
                 if (error) {
                     throw error;
                 }
 
-                // Wait a moment to ensure deletion is processed
-                await new Promise(resolve => setTimeout(resolve, 500));
-
-                // Verify deletion
-                const { data: checkData } = await supabase
-                    .from('services')
-                    .select('id')
-                    .eq('id', id)
-                    .single();
-
-                if (checkData) {
-                    throw new Error('Service still exists');
-                }
-
-                // If we get here, the deletion was successful
+                // If successful, remove from UI
+                const card = document.querySelector(`[data-id="${id}"]`);
                 if (card) {
                     card.remove();
+                }
+
+                // No need to reload everything, just update the UI
+                const remainingCards = document.querySelectorAll('.service-card');
+                if (remainingCards.length === 0) {
+                    servicesContainer.innerHTML = '<p>No services available.</p>';
                 }
 
             } catch (error) {
                 console.error('Delete error:', error);
                 alert('Error deleting service. Please try again.');
-                // Restore the UI if deletion failed
-                const card = document.querySelector(`[data-id="${id}"]`);
-                if (card) {
-                    card.style.opacity = '1';
-                }
-                // Reload to ensure we're in sync
-                await loadServices();
             }
         }
 
