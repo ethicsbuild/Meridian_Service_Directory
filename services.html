@@ -49,14 +49,16 @@
     </section>
   </main>
 
-  <!-- Configuration and Dependencies -->
-  <script src="config.js"></script>
+  <!-- Supabase SDK -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
-    // Initialize Supabase client with config values
-    const supabase = window.supabase.createClient(window.config.SUPABASE_URL, window.config.SUPABASE_ANON_KEY);
+    // Initialize Supabase client
+    const SUPABASE_URL = "https://hpzmzppvfqsgirdxblmh.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhwem16cHB2ZnFzZ2lyZHhibG1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNTA5MjEsImV4cCI6MjA3MDcyNjkyMX0.b8_jIVUniTjSiZJfQ7HVYqsgmiYyqLL3wVkJWDtN8rs";
 
-    // DOM
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Rest of the code...
     const resultsEl = document.getElementById('results');
     const resultsMetaEl = document.getElementById('resultsMeta');
     const qEl = document.getElementById('q');
