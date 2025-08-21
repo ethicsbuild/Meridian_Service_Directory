@@ -225,7 +225,7 @@
 
         // Clear old or invalid entries from the datalist on page load
         Array.from(categoryList.options).forEach((option) => {
-          if (!validCategories.has(option.value) && option.value.length <= 1) {
+          if (!validCategories.has(option.value) || option.value.length <= 1) {
             categoryList.removeChild(option);
           }
         });
