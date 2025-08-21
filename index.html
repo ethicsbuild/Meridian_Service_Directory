@@ -223,7 +223,14 @@
           "Artisan Crafts",
         ]);
 
-        // Populate the datalist with valid categories
+        // Clear old or invalid entries from the datalist on page load
+        Array.from(categoryList.options).forEach((option) => {
+          if (!validCategories.has(option.value) && option.value.length <= 1) {
+            categoryList.removeChild(option);
+          }
+        });
+
+        // Ensure valid categories are present
         categoryList.innerHTML = Array.from(validCategories)
           .map((category) => `<option value="${category}"></option>`)
           .join("");
