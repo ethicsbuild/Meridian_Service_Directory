@@ -101,50 +101,150 @@
 
   <!-- Supabase SDK -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <!-- Configure your Supabase project here -->
   <script>
+    // Supabase client
     const SUPABASE_URL = "https://hpzmzppvfqsgirdxblmh.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhwem16cHB2ZnFzZ2lyZHhibG1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNTA5MjEsImV4cCI6MjA3MDcyNjkyMX0.b8_jIVUniTjSiZJfQ7HVYqsgmiYyqLL3wVkJWDtN8rs";
+    const SUPABASE_ANON_KEY =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhwem16cHB2ZnFzZ2lyZHhibG1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNTA5MjEsImV4cCI6MjA3MDcyNjkyMX0.b8_jIVUniTjSiZJfQ7HVYqsgmiYyqLL3wVkJWDtN8rs";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Form handler: insert into 'services' table
-    document.addEventListener('DOMContentLoaded', () => {
-      const form = document.getElementById('service-form');
-      const message = document.getElementById('message');
+    // Small helpers
+    const $ = (sel) => document.querySelector(sel);
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
 
-      form.addEventListener('submit', async (e) => {
+    // Validation rules
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    const PHONE_RE = /^[()\-\s.+\d]{10,}$/;
+    const LINK_RE = /https?:\/\//i;
+
+    function validate(payload) {
+      const errors = {};
+      if (!payload.name || payload.name.length < 2) {
+        errors.name = "Name must be at least 2 characters.";
+      }
+      if (!payload.category || payload.category.length < 2) {
+        errors.category = "Please enter what you offer (min 2 characters).";
+      }
+      if (!payload.description || payload.description.length < 10 || payload.description.length > 600) {
+        errors.description = "Description must be 10–600 characters.";
+      } else if (LINK_RE.test(payload.description)) {
+        errors.description = "Please don’t include links in the description.";
+      }
+      if (payload.price && payload.price.length > 120) {
+        errors.price = "Price must be under 120 characters.";
+      }
+      if (!payload.contact) {
+        errors.contact = "Please provide an email or phone.";
+      } else if (
+        !EMAIL_RE.test(payload.contact) &&
+        !PHONE_RE.test(payload.contact)
+      ) {
+        errors.contact = "Contact must be a valid email or phone.";
+      }
+      return errors;
+    }
+
+    // Form + Gallery
+    document.addEventListener("DOMContentLoaded", () => {
+      const form = $("#service-form");
+      const message = $("#message");
+
+      loadServices(); // populate gallery immediately
+
+      if (!form) return;
+
+      form.addEventListener("submit", async (e) => {
         e.preventDefault();
-        message.textContent = '';
+        message.textContent = "";
 
         const formData = new FormData(form);
         const payload = {
-          name: (formData.get('name') || '').trim(),
-          category: (formData.get('category') || '').trim(),
-          description: (formData.get('description') || '').trim(),
-          price: (formData.get('price') || '').trim() || null,
-          contact: (formData.get('contact') || '').trim()
+          name: (formData.get("name") || "").trim(),
+          category: (formData.get("category") || "").trim(),
+          description: (formData.get("description") || "").trim(),
+          price: (formData.get("price") || "").trim() || null,
+          contact: (formData.get("contact") || "").trim(),
         };
 
-        if (!payload.name || !payload.category || !payload.description || !payload.contact) {
-          message.style.color = 'crimson';
-          message.textContent = 'Please fill in all required fields.';
+        // Validate
+        const errors = validate(payload);
+        if (Object.keys(errors).length > 0) {
+          message.style.color = "crimson";
+          message.innerHTML =
+            "<ul>" +
+            Object.values(errors)
+              .map((m) => `<li>${escapeHtml(m)}</li>`)
+              .join("") +
+            "</ul>";
           return;
         }
 
-        try {
-          const { error } = await supabase.from('services').insert(payload);
-          if (error) throw error;
-
-          message.style.color = 'green';
-          message.textContent = 'Thanks! Your service has been added.';
-          form.reset();
-        } catch (err) {
-          console.error(err);
-          message.style.color = 'crimson';
-          message.textContent = 'Could not submit your service. Please try again.';
+        // Save to Supabase
+        const { error } = await supabase.from("services").insert(payload);
+        if (error) {
+          console.error(error);
+          message.style.color = "crimson";
+          message.textContent =
+            "Could not submit your service. Please try again.";
+          return;
         }
+
+        message.style.color = "green";
+        message.textContent = "Thanks! Your service has been added.";
+        form.reset();
+        await loadServices(); // refresh gallery
       });
     });
+
+    async function loadServices() {
+      const container = document.getElementById("services");
+      if (!container) return;
+      container.innerHTML = "Loading…";
+
+      const { data, error } = await supabase
+        .from("services")
+        .select("id, name, category, description, price, contact, created_at")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error(error);
+        container.innerHTML = "<p>Could not load services.</p>";
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        container.innerHTML = "<p>No services yet.</p>";
+        return;
+      }
+
+      container.innerHTML = "";
+      data.forEach((svc) => {
+        const card = document.createElement("div");
+        card.className = "service-card";
+        const priceRow = svc.price
+          ? `<p class="service-meta">Price: ${escapeHtml(svc.price)}</p>`
+          : "";
+        const contactRow = svc.contact
+          ? `<p class="service-meta">Contact: ${escapeHtml(svc.contact)}</p>`
+          : "";
+        card.innerHTML = `
+          <h3>${escapeHtml(svc.category)}</h3>
+          <p>${escapeHtml(svc.description)}</p>
+          ${priceRow}
+          <p class="service-meta">Offered by: ${escapeHtml(svc.name)}</p>
+          ${contactRow}
+        `;
+        container.appendChild(card);
+      });
+    }
   </script>
 </body>
 </html>
