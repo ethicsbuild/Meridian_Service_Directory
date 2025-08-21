@@ -177,5 +177,73 @@
     // Kickoff
     load();
   </script>
+
+  <label for="search-category">Filter by category:</label>
+  <select id="search-category" name="search-category">
+    <option value="">All Categories</option>
+    <option value="Babysitting">Babysitting</option>
+    <option value="Pet Care">Pet Care</option>
+    <option value="Lawn Care">Lawn Care</option>
+    <option value="Handyman">Handyman</option>
+    <option value="Tutoring">Tutoring</option>
+    <option value="Childcare">Childcare</option>
+    <option value="Carpool">Carpool</option>
+    <option value="Elderly Care">Elderly Care</option>
+    <option value="Event Planning">Event Planning</option>
+    <option value="Home Cleaning">Home Cleaning</option>
+    <option value="Tech Support">Tech Support</option>
+    <option value="Artisan Crafts">Artisan Crafts</option>
+  </select>
+
+  <script>
+    document.getElementById("search-category").addEventListener("change", async (e) => {
+      const selectedCategory = e.target.value;
+      const container = document.getElementById("services");
+      if (!container) return;
+
+      container.innerHTML = "Loading…";
+
+      // Fetch services from Supabase
+      const { data, error } = await supabase
+        .from("services")
+        .select("id, name, category, description, price, contact, created_at")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error(error);
+        container.innerHTML = "<p>Could not load services.</p>";
+        return;
+      }
+
+      const filteredData = selectedCategory
+        ? data.filter((svc) => svc.category === selectedCategory)
+        : data;
+
+      if (!filteredData || filteredData.length === 0) {
+        container.innerHTML = "<p>No services found.</p>";
+        return;
+      }
+
+      container.innerHTML = "";
+      filteredData.forEach((svc) => {
+        const card = document.createElement("div");
+        card.className = "service-card";
+        const priceRow = svc.price
+          ? `<p class=\"service-meta\">Price: ${escapeHtml(svc.price)}</p>`
+          : "";
+        const contactRow = svc.contact
+          ? `<p class=\"service-meta\">Contact: ${escapeHtml(svc.contact)}</p>`
+          : "";
+        card.innerHTML = `
+          <h3>${escapeHtml(svc.category)}</h3>
+          <p>${escapeHtml(svc.description)}</p>
+          ${priceRow}
+          <p class=\"service-meta\">Offered by: ${escapeHtml(svc.name)}</p>
+          ${contactRow}
+        `;
+        container.appendChild(card);
+      });
+    });
+  </script>
 </body>
 </html>
