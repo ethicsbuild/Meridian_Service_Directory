@@ -248,11 +248,13 @@
       }
     });
 
+    // Force fresh data fetch from Supabase
     async function loadServices() {
       const container = document.getElementById("services");
       if (!container) return;
       container.innerHTML = "Loading…";
 
+      // Fetch fresh data from Supabase
       const { data, error } = await supabase
         .from("services")
         .select("id, name, category, description, price, contact, created_at")
@@ -267,6 +269,36 @@
       if (!data || data.length === 0) {
         container.innerHTML = "<p>No services yet.</p>";
         return;
+      }
+
+      // Clear and repopulate the dropdown with fresh data
+      const categoryList = document.getElementById("category-list");
+      if (categoryList) {
+        const validCategories = new Set([
+          "Babysitting",
+          "Pet Care",
+          "Lawn Care",
+          "Handyman",
+          "Tutoring",
+          "Childcare",
+          "Carpool",
+          "Elderly Care",
+          "Event Planning",
+          "Home Cleaning",
+          "Tech Support",
+          "Artisan Crafts",
+        ]);
+
+        // Add categories from the database
+        data.forEach((svc) => {
+          if (svc.category && !validCategories.has(svc.category)) {
+            validCategories.add(svc.category);
+          }
+        });
+
+        categoryList.innerHTML = Array.from(validCategories)
+          .map((category) => `<option value="${category}"></option>`)
+          .join("");
       }
 
       container.innerHTML = "";
