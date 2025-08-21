@@ -202,6 +202,43 @@
         form.reset();
         await loadServices(); // refresh gallery
       });
+
+      // Allow user submissions to populate the dropdown dynamically
+      const categoryInput = document.getElementById("category");
+      const categoryList = document.getElementById("category-list");
+
+      if (categoryInput && categoryList) {
+        const validCategories = new Set([
+          "Babysitting",
+          "Pet Care",
+          "Lawn Care",
+          "Handyman",
+          "Tutoring",
+          "Childcare",
+          "Carpool",
+          "Elderly Care",
+          "Event Planning",
+          "Home Cleaning",
+          "Tech Support",
+          "Artisan Crafts",
+        ]);
+
+        // Populate the datalist with valid categories
+        categoryList.innerHTML = Array.from(validCategories)
+          .map((category) => `<option value="${category}"></option>`)
+          .join("");
+
+        // Add user submissions to the dropdown if valid
+        categoryInput.addEventListener("change", (e) => {
+          const userInput = e.target.value.trim();
+          if (userInput && !validCategories.has(userInput)) {
+            validCategories.add(userInput);
+            const option = document.createElement("option");
+            option.value = userInput;
+            categoryList.appendChild(option);
+          }
+        });
+      }
     });
 
     async function loadServices() {
